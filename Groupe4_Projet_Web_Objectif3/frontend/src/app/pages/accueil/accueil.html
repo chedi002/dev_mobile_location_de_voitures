@@ -1,0 +1,207 @@
+<!-- SECTION PRINCIPALE -->
+<section class="hero hero-photo">
+  <img class="hero-fond" src="images/hero-accueil.jpg" alt="" fetchpriority="high">
+  <div class="hero-voile" aria-hidden="true"></div>
+  <div class="wrap hero-in">
+    <div class="hero-text">
+      <p class="over">Voyagez sans limites</p>
+      <h1>Votre prochaine <em>destination</em> commence ici</h1>
+      <p class="lead">Louez votre voiture. Explorez la Tunisie. Comparez les véhicules, voyez le prix détaillé et réservez en quatre étapes.</p>
+      <div class="hero-btns">
+        <a class="btn btn-green" routerLink="/voitures">Choisir une voiture <app-icone nom="fleche-droite" [taille]="18" /></a>
+        <a class="btn btn-line" routerLink="/" fragment="roadtrip"><app-icone nom="route" [taille]="18" /> Planifier mon road-trip</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RECHERCHE DE VOITURE -->
+<section class="wrap" id="recherche">
+  <form class="search" novalidate (ngSubmit)="rechercher()">
+    <h2 class="sr">Recherche rapide</h2>
+    <label>Agence de départ
+      <select name="depart" [(ngModel)]="depart" required>
+        <option value="">Choisir…</option>
+        @for (a of flotte.agences(); track a) { <option [value]="a">{{ a }}</option> }
+      </select>
+    </label>
+    <label>Retrait <input type="datetime-local" name="debut" [(ngModel)]="debut" required></label>
+    <label>Retour <input type="datetime-local" name="fin" [(ngModel)]="fin" required></label>
+    <label>Âge du conducteur
+      <select name="age" [(ngModel)]="age" required>
+        <option value="">Choisir…</option>
+        @for (a of ages; track a) { <option [value]="a">{{ a }}</option> }
+      </select>
+    </label>
+    <button class="btn btn-green" type="submit">Rechercher</button>
+
+    <label class="check"><input type="checkbox" name="autreRetour" [(ngModel)]="autreRetour"> Retour dans une autre agence</label>
+    @if (autreRetour()) {
+      <label>Agence de retour
+        <select name="retour" [(ngModel)]="retour">
+          <option value="">Choisir…</option>
+          @for (a of flotte.agences(); track a) { <option [value]="a">{{ a }}</option> }
+        </select>
+      </label>
+    }
+    <p class="err" role="alert">{{ erreurRecherche() }}</p>
+  </form>
+</section>
+
+<!-- CATÉGORIES -->
+<section class="wrap section" aria-labelledby="t-cat">
+  <h2 id="t-cat">Quel véhicule pour quel voyage ?</h2>
+  <ul class="cat-grille">
+    @for (c of tuiles(); track c.cat) {
+      <li>
+        <a class="cat-carte" routerLink="/voitures" [queryParams]="{ cat: c.cat }">
+          <img appPhoto [src]="c.image" alt="" loading="lazy">
+          <span class="cat-texte">
+            <strong>{{ c.nom }}</strong>
+            <span>{{ c.sous }}</span>
+          </span>
+          @if (c.prix) { <span class="cat-prix">dès {{ c.prix }} DT<small>/jour</small></span> }
+        </a>
+      </li>
+    }
+  </ul>
+</section>
+
+<!-- VÉHICULES POPULAIRES -->
+<section class="wrap section" aria-labelledby="t-veh">
+  <div class="sec-head">
+    <h2 id="t-veh">Véhicules populaires</h2>
+    <a routerLink="/voitures">Voir tout le catalogue</a>
+  </div>
+  <div class="grid3">
+    @for (p of populaires(); track p.nom) {
+      <article class="card veh">
+        <div class="veh-img" [class]="p.cls">
+          <img appPhoto [src]="photo(p.v!)" [alt]="p.nom" loading="lazy">
+        </div>
+        <div class="veh-body">
+          <span class="badge" [class]="p.badge[0]">{{ p.badge[1] }}</span>
+          <h3>{{ p.nom }}</h3>
+          <p class="meta">{{ flotte.nomCat(p.v!.cat) }} · {{ p.v!.places }} places · {{ p.v!.boite }}</p>
+          <p class="price"><strong>{{ prixDT(p.v!.prix) }}</strong> / jour</p>
+          <a class="btn btn-green" [routerLink]="['/voitures', p.v!.id]">Voir le véhicule</a>
+        </div>
+      </article>
+    } @empty {
+      <p class="chargement">Chargement des véhicules…</p>
+    }
+  </div>
+  <p class="note">Le total estimé s’affiche dès que vos dates sont choisies. Options et frais éventuels sont détaillés avant confirmation.</p>
+</section>
+
+<!-- PLANIFICATEUR DE ROAD-TRIP -->
+<section class="planner-band" id="roadtrip" #bandeRoadtrip aria-labelledby="t-rt">
+  <div class="wrap planner">
+    <div>
+      <h2 id="t-rt">Votre voyage en un clic</h2>
+      <p>Indiquez votre trajet : WIJHA vous conseille la catégorie de voiture adaptée.</p>
+      <p class="example">Exemple : Tunis → Hammamet → Sousse. Itinéraire illustratif, pas une offre.</p>
+    </div>
+    <form class="planner-form" novalidate (ngSubmit)="conseiller()">
+      <label>Départ <input name="from" type="text" placeholder="Tunis" [(ngModel)]="rtDepart"></label>
+      <label>Destination <input name="to" type="text" placeholder="Sousse" #champDest [(ngModel)]="rtDestination"></label>
+      <label>Voyageurs <input name="trav" type="number" min="1" max="12" [(ngModel)]="rtTrav"></label>
+      <label>Bagages <input name="bag" type="number" min="0" max="12" [(ngModel)]="rtBag"></label>
+      <label class="full">Type de route
+        <select name="road" [(ngModel)]="rtRoute">
+          <option value="ville">Ville et autoroute</option>
+          <option value="pistes">Pistes ou Sud</option>
+        </select>
+      </label>
+      <button class="btn btn-green full" type="submit">Trouver ma voiture idéale</button>
+      <p class="result full" aria-live="polite">{{ conseil() }}</p>
+    </form>
+  </div>
+</section>
+
+<!-- DESTINATIONS -->
+<section class="wrap section" aria-labelledby="t-dest">
+  <div class="destinations-header">
+    <div>
+      <h2 id="t-dest">Explorez la Tunisie</h2>
+      <p>Découvrez les destinations incontournables de votre prochain voyage.</p>
+    </div>
+    <div class="destinations-arrows">
+      <button type="button" aria-label="Destinations précédentes" [disabled]="indexDest() === 0" (click)="deplacer(-1)"><app-icone nom="fleche-gauche" [taille]="20" /></button>
+      <button type="button" aria-label="Destinations suivantes" [disabled]="indexDest() >= maxDest()" (click)="deplacer(1)"><app-icone nom="fleche-droite" [taille]="20" /></button>
+    </div>
+  </div>
+  <div class="destinations-slider">
+    <ul class="dests" #liste [style.transform]="'translateX(-' + decalage() + 'px)'">
+      @for (d of destinations; track d.fichier) {
+        <li [class]="d.cls">
+          <img appPhoto [src]="'images/destinations/' + d.fichier + '.jpg'" [alt]="'Photo de ' + d.nom" loading="lazy">
+          <h3>{{ d.nom }}</h3>
+          <button type="button" (click)="ajouterDestination(d.nom)">Ajouter à mon road-trip</button>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<!-- NOS AGENCES (liste + carte) -->
+<section class="agences-band" id="agences" aria-labelledby="t-ag">
+  <div class="wrap">
+    <h2 id="t-ag">Nos agences</h2>
+    <p class="ag-intro">Choisissez une ville pour la voir sur la carte et préparer votre itinéraire.</p>
+    @if (flotte.pret()) {
+      <div class="agences">
+        <ul class="ag-list">
+          @for (a of flotte.agencesInfo(); track a.id; let i = $index) {
+            <li>
+              <button type="button" class="ag-card" [class.on]="agenceActive() === i" [attr.aria-pressed]="agenceActive() === i" (click)="agenceActive.set(i)">
+                <span class="ag-dot" aria-hidden="true"></span>
+                <span class="ag-info"><strong>{{ a.ville }}</strong><small>{{ flotte.zone(a.ville) }}</small></span>
+              </button>
+              <a class="ag-route" [href]="'https://www.google.com/maps/dir/?api=1&destination=' + a.latitude + ',' + a.longitude" target="_blank" rel="noopener">Itinéraire</a>
+            </li>
+          }
+        </ul>
+        <div class="ag-map-box">
+          <app-carte-agences id="map" [agences]="flotte.agencesInfo()" [zone]="flotte.zone" [(actif)]="agenceActive" />
+        </div>
+      </div>
+    } @else {
+      <p class="chargement">Chargement des agences…</p>
+    }
+    <p class="note">Positions indiquées au niveau de la ville. Les horaires peuvent varier les jours fériés.</p>
+  </div>
+</section>
+
+<!-- AVANTAGES -->
+<section class="wrap section" aria-labelledby="t-why">
+  <h2 id="t-why">Pourquoi choisir WIJHA ?</h2>
+  <div class="grid4">
+    <div class="pt p1"><h3>Prix détaillé</h3><p>Location, options et frais éventuels affichés avant de confirmer.</p></div>
+    <div class="pt p2"><h3>Conditions accessibles</h3><p>Âge, permis, dépôt de garantie et annulation expliqués clairement.</p></div>
+    <div class="pt p3"><h3>Agences joignables</h3><p>Adresses, horaires et contacts de chaque agence.</p></div>
+    <div class="pt p4"><h3>Services au choix</h3><p>GPS, siège bébé, chauffeur, 7 places, minibus, transfert aéroport selon disponibilité.</p></div>
+  </div>
+</section>
+
+<!-- ÉTAPES -->
+<section class="wrap section" aria-labelledby="t-steps">
+  <h2 id="t-steps">Réservez en quatre étapes</h2>
+  <ol class="steps">
+    <li><h3>Dates et agences</h3><p>Choisissez où et quand.</p></li>
+    <li><h3>Véhicule</h3><p>Comparez les voitures disponibles.</p></li>
+    <li><h3>Options et coordonnées</h3><p>Ajoutez GPS, siège bébé ou chauffeur.</p></li>
+    <li><h3>Confirmation</h3><p>Vérifiez le récapitulatif et recevez votre référence.</p></li>
+  </ol>
+  <p class="note">Avec un compte, retrouvez vos réservations, leur statut et vos récapitulatifs dans <a routerLink="/espace-client">votre espace client</a>.</p>
+</section>
+
+<!-- FAQ -->
+<section class="wrap section faq" aria-labelledby="t-faq">
+  <h2 id="t-faq">Questions fréquentes</h2>
+  <details><summary>Quel âge et quelle ancienneté de permis faut-il ?</summary><p>21 ans au minimum et un permis de plus de deux ans. Voir les <a routerLink="/conditions">conditions de location</a>.</p></details>
+  <details><summary>Un dépôt de garantie est-il demandé ?</summary><p>Oui, une pré-autorisation sur carte bancaire, de 850 DT à 3 400 DT selon la catégorie.</p></details>
+  <details><summary>Comment annuler ou modifier une réservation ?</summary><p>Depuis votre espace client, selon les <a routerLink="/conditions" fragment="annulation">conditions d’annulation</a>.</p></details>
+  <details><summary>La réservation est-elle confirmée immédiatement ?</summary><p>La demande est enregistrée tout de suite, puis confirmée par l’agence.</p></details>
+  <p class="note"><a routerLink="/faq">Toutes les questions</a></p>
+</section>

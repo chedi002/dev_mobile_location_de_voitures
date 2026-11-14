@@ -1,0 +1,169 @@
+<section class="page-head"><div class="wrap">
+  <h1>Réservez en quatre étapes</h1>
+  <p>Votre « ticket de voyage » à droite se met à jour à chaque choix, avec le détail du prix.</p>
+</div></section>
+
+<div class="wrap">
+  <ol class="stepper" #stepper aria-label="Étapes de la réservation">
+    @for (t of etapes; track t; let i = $index) {
+      <li [class.cur]="etape() === i + 1" [class.done]="etape() > i + 1">
+        <button type="button" [attr.aria-current]="etape() === i + 1 ? 'step' : null" (click)="revenirA(i + 1)">
+          <span class="n">@if (etape() > i + 1) { <app-icone nom="valide" [taille]="16" [trait]="3" /> } @else { {{ i + 1 }} }</span><span class="t">{{ t }}</span>
+        </button>
+      </li>
+    }
+  </ol>
+
+  @if (!flotte.pret()) {
+    <p class="chargement">Chargement de la flotte…</p>
+  } @else {
+  <div class="resa-layout">
+    <div>
+      @switch (etape()) {
+
+        <!-- ÉTAPE 1 -->
+        @case (1) {
+          <section class="step" aria-labelledby="s1">
+            <h2 id="s1">Dates et agences</h2>
+            @if (rtTexte()) {
+              <div class="rt-box">
+                <p>{{ rtTexte() }}</p>
+                <button class="btn btn-green btn-sm" type="button" (click)="utiliserRoadtrip()">Utiliser mon road-trip</button>
+              </div>
+            }
+            <div class="form-grid">
+              <label>Agence de départ
+                <select [(ngModel)]="rDepart"><option value="">Choisir…</option>@for (a of flotte.agences(); track a) { <option [value]="a">{{ a }}</option> }</select>
+              </label>
+              <label class="check" style="grid-column:auto;align-self:end"><input type="checkbox" [(ngModel)]="rAutre"> Retour dans une autre agence</label>
+              @if (rAutre()) {
+                <label class="full">Agence de retour
+                  <select [(ngModel)]="rRetour"><option value="">Choisir…</option>@for (a of flotte.agences(); track a) { <option [value]="a">{{ a }}</option> }</select>
+                </label>
+              }
+              <label>Retrait <input type="datetime-local" [min]="maintenant" [(ngModel)]="rDebut"></label>
+              <label>Retour <input type="datetime-local" [min]="maintenant" [(ngModel)]="rFin"></label>
+              <label>Âge du conducteur
+                <select [(ngModel)]="rAge"><option value="">Choisir…</option>@for (a of ages; track a) { <option [value]="a">{{ a }}</option> }</select>
+              </label>
+              <label>Routes prévues
+                <select [(ngModel)]="rRoute"><option value="ville">Ville et autoroute</option><option value="pistes">Pistes ou Sud</option></select>
+              </label>
+              <label>Voyageurs <input type="number" min="1" max="12" [(ngModel)]="rTrav"></label>
+              <label>Bagages (valises) <input type="number" min="0" max="12" [(ngModel)]="rBag"></label>
+            </div>
+            <p class="msg-err" role="alert">{{ erreur() }}</p>
+            <div class="nav-step"><span></span><button class="btn btn-green" type="button" (click)="suivant()">Choisir mon véhicule</button></div>
+          </section>
+        }
+
+        <!-- ÉTAPE 2 -->
+        @case (2) {
+          <section class="step" aria-labelledby="s2">
+            <h2 id="s2">Choisissez votre véhicule</h2>
+            <div class="reco">
+              <strong>Recommandé pour vous : {{ reco().cats.map(flotte.nomCat).join(' ou ') }}</strong>{{ reco().pourquoi }}. Recommandation indicative, selon la flotte disponible.
+            </div>
+            <div class="choix">
+              @for (c of choix(); track c.v.id) {
+                <label class="choix-item" [class.off]="c.d.e === 'no'">
+                  <input type="radio" name="veh" [value]="c.v.id" [disabled]="c.d.e === 'no'" [checked]="c.v.id === vid()" (change)="vid.set(c.v.id)">
+                  <span><strong>{{ c.v.nom }}</strong>@if (c.reco) { <span class="tag">Recommandé</span> }<br>
+                    <small>{{ flotte.nomCat(c.v.cat) }} ou similaire · <app-icone nom="places" [taille]="14" /> {{ c.v.places }} · <app-icone nom="bagages" [taille]="14" /> {{ c.v.bagTxt }} · <app-icone nom="boite" [taille]="14" /> {{ c.v.boite }}</small><br>
+                    @if (c.d.e === 'no') { <span class="avail a-no">Indisponible · libre dès le {{ fmtD($any(c.d).libre) }}</span> }
+                    @else { <span class="avail a-ok">Disponible pour vos dates</span> }
+                  </span>
+                  <span class="price-main">{{ c.v.prix * s().nj }} DT<small style="display:block;font:400 .8rem var(--font-b);color:var(--muted)">{{ c.v.prix }} DT / jour</small></span>
+                </label>
+              } @empty {
+                <p>Aucun véhicule dans cette agence. Essayez une autre agence de départ.</p>
+              }
+            </div>
+            <p class="msg-err" role="alert">{{ erreur() }}</p>
+            <div class="nav-step"><button class="btn btn-ghost" type="button" (click)="aller(1)">Retour</button><button class="btn btn-green" type="button" (click)="suivant()">Options et coordonnées</button></div>
+          </section>
+        }
+
+        <!-- ÉTAPE 3 -->
+        @case (3) {
+          <section class="step" aria-labelledby="s3">
+            <h2 id="s3">Options et coordonnées</h2>
+            <fieldset><legend>Options</legend>
+              <div class="opts">
+                @for (o of optionsEtape3(); track o.id) {
+                  @if (o.id === 'retour') {
+                    <label class="opt auto"><input type="checkbox" checked disabled>
+                      <span>{{ o.nom }}<small>Ajouté automatiquement : retour dans une autre agence.</small></span><b>{{ tarifOption(o) }}</b></label>
+                  } @else {
+                    <label class="opt"><input type="checkbox" [checked]="sel().has(o.id)" (change)="basculerOption(o.id, $any($event.target).checked)">
+                      <span>{{ o.nom }}<small>{{ o.info }}</small></span><b>{{ tarifOption(o) }}</b></label>
+                  }
+                }
+              </div>
+            </fieldset>
+            <fieldset style="margin-top:1.5rem"><legend>Vos coordonnées</legend>
+              <div class="form-grid">
+                <label>Prénom <input autocomplete="given-name" [(ngModel)]="cPrenom"></label>
+                <label>Nom <input autocomplete="family-name" [(ngModel)]="cNom"></label>
+                <label>E-mail <input type="email" autocomplete="email" [(ngModel)]="cEmail"></label>
+                <label>Téléphone <input type="tel" autocomplete="tel" placeholder="+216 …" [(ngModel)]="cTel"></label>
+                <label class="full">Numéro de vol (si vous arrivez en avion, facultatif) <input placeholder="Ex. TU 123" [(ngModel)]="cVol"></label>
+              </div>
+              <p class="fine" style="margin-top:.5rem">Votre téléphone sert à vous joindre si le véhicule change ou en cas de retard.</p>
+            </fieldset>
+            <p class="msg-err" role="alert">{{ erreur() }}</p>
+            <div class="nav-step"><button class="btn btn-ghost" type="button" (click)="aller(2)">Retour</button><button class="btn btn-green" type="button" (click)="suivant()">Vérifier ma réservation</button></div>
+          </section>
+        }
+
+        <!-- ÉTAPE 4 -->
+        @case (4) {
+          <section class="step" aria-labelledby="s4">
+            <h2 id="s4">Récapitulatif et confirmation</h2>
+            <table class="recap-final"><tbody>
+              @for (r of recapitulatif(); track r[0]) { <tr><th scope="row">{{ r[0] }}</th><td>{{ r[1] }}</td></tr> }
+              <tr><th scope="row">Prix détaillé</th><td>@for (l of prix().L; track l.t) { {{ l.t }} : {{ l.m }} DT<br> }</td></tr>
+              <tr><th scope="row">Total estimé</th><td><strong>{{ prix().total }} DT</strong></td></tr>
+            </tbody></table>
+            <label class="cgu"><input type="checkbox" [(ngModel)]="cgu"> <span>J’ai lu et j’accepte les <a routerLink="/conditions" target="_blank">conditions de location et d’annulation</a>.</span></label>
+            <p class="msg-err" role="alert">{{ erreur() }}</p>
+            <div class="nav-step"><button class="btn btn-ghost" type="button" (click)="aller(3)">Retour</button><button class="btn btn-green" type="button" [disabled]="envoi()" (click)="confirmer()">{{ envoi() ? 'Enregistrement…' : 'Confirmer ma demande' }}</button></div>
+          </section>
+        }
+
+        <!-- CONFIRMATION -->
+        @case (5) {
+          <section class="confirm" aria-labelledby="s5">
+            <h2 id="s5">Votre demande est enregistrée</h2>
+            <p>Conservez votre référence unique :</p>
+            <div class="ref"><code>{{ ref() }}</code><button class="btn btn-ghost btn-sm" type="button" (click)="copier()">{{ copie() }}</button></div>
+            @if (immatriculation()) { <p class="fine">Voiture réservée : {{ v()?.nom }}, immatriculée {{ immatriculation() }}, à l’agence de {{ rDepart() }}.</p> }
+            @if (totalServeur() !== null) { <p class="fine">Montant enregistré : <strong>{{ totalServeur() }} DT</strong>. Un récapitulatif vous est envoyé par e-mail.</p> }
+            <div class="actions">
+              <button class="btn btn-green btn-sm" type="button" (click)="calendrier()">Ajouter à mon calendrier</button>
+              <button class="btn btn-ghost btn-sm" type="button" (click)="imprimer()">Imprimer ou enregistrer en PDF</button>
+              <a class="btn btn-ghost btn-sm" routerLink="/espace-client">Mes réservations</a>
+            </div>
+            <h3>Suivi de votre demande</h3>
+            <ol class="timeline">
+              <li class="on">Demande envoyée</li><li>Réservation confirmée</li><li>Véhicule prêt</li><li>Location en cours</li><li>Retour effectué</li>
+            </ol>
+            <p class="demo">Votre demande est enregistrée et la voiture est bloquée pour ces dates. L’agence la confirme ensuite ; vous suivez son statut dans <a routerLink="/espace-client">votre espace</a>.</p>
+          </section>
+        }
+      }
+    </div>
+
+    <!-- TICKET DE VOYAGE -->
+    <aside class="ticket" aria-label="Ticket de voyage">
+      <h2>Votre ticket de voyage</h2>
+      <dl>@for (r of ticket(); track r[0]) { <div class="t-row"><dt>{{ r[0] }}</dt><dd>{{ r[1] }}</dd></div> }</dl>
+      <div class="t-lines">
+        @for (l of prix().L; track l.t) { <details><summary><span>{{ l.t }}</span><span>{{ l.m }} DT</span></summary><p>{{ l.e }}</p></details> }
+      </div>
+      <div class="t-total"><span>Total estimé</span><span>{{ prix().L.length ? prix().total + ' DT' : '—' }}</span></div>
+      <p class="fine" style="margin-top:.6rem">Le prix final est recalculé et la disponibilité vérifiée à la confirmation.</p>
+    </aside>
+  </div>
+  }
+</div>

@@ -1,0 +1,11 @@
+# Photos originales téléchargées (42 Mo) : regénérables avec collecter-photos.py
+archives/conception/donnees/photos-brutes/
+archives/conception/donnees/photos-apercu.html
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+
+# Secrets locaux (chaîne de connexion à la base…)
+.env

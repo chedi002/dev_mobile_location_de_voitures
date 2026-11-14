@@ -1,0 +1,152 @@
+<div class="wrap">
+  <nav class="crumbs" aria-label="Fil d'Ariane">
+    <a routerLink="/">Accueil</a> / <a routerLink="/voitures" [queryParams]="paramsListe()">Voitures</a> / <span>{{ v()?.nom ?? 'Véhicule' }}</span>
+  </nav>
+
+  @if (!flotte.pret()) {
+    <p class="chargement">Chargement du véhicule…</p>
+  } @else if (!v()) {
+    <div class="introuvable">
+      <h1>Véhicule introuvable</h1>
+      <p>Ce véhicule n’existe pas ou n’est plus proposé.</p>
+      <p style="margin-top:1rem"><a class="btn btn-green" routerLink="/voitures">Voir tous les véhicules</a></p>
+    </div>
+  } @else {
+    @let veh = v()!;
+    <article>
+      <div class="d-head">
+        <h1>{{ veh.nom }}</h1>
+        <p class="similar">{{ nomCat() }} · {{ veh.marque }} {{ veh.modele }} ou similaire</p>
+        <div class="badges">@for (b of badges(veh); track b.txt) { <span class="badge" [class]="b.cls">{{ b.txt }}</span> }</div>
+      </div>
+
+      <div class="detail-layout">
+        <div class="d-main">
+          <section aria-label="Photos">
+            <div class="gal-main" [class]="'g-' + veh.cat">
+              @for (n of [vue()]; track n) { <img appPhoto [src]="photo(veh, n)" [alt]="veh.nom + ' – ' + vues[n - 1]" loading="lazy"> }
+              <span class="gal-label">{{ vues[vue() - 1] }}</span>
+            </div>
+            <div class="thumbs">
+              @for (t of vues; track t; let i = $index) {
+                <button type="button" class="thumb" [class]="'g-' + veh.cat" [attr.aria-pressed]="vue() === i + 1" [attr.aria-label]="t" (click)="vue.set(i + 1)">
+                  <img appPhoto [src]="photo(veh, i + 1)" [alt]="veh.nom + ' – ' + t" loading="lazy"><span>{{ t }}</span>
+                </button>
+              }
+            </div>
+          </section>
+
+          <section aria-labelledby="h-carac">
+            <h2 id="h-carac">Caractéristiques</h2>
+            <dl class="specs-grid">
+              <div class="spec"><dt>Catégorie</dt><dd>{{ nomCat() }}</dd></div>
+              <div class="spec"><dt>Places</dt><dd>{{ veh.places }}</dd></div>
+              <div class="spec"><dt>Portes</dt><dd>{{ veh.portes }}</dd></div>
+              <div class="spec"><dt>Bagages</dt><dd>{{ veh.bagTxt }}</dd></div>
+              <div class="spec"><dt>Boîte de vitesses</dt><dd>{{ veh.boite }}</dd></div>
+              <div class="spec"><dt>Carburant</dt><dd>{{ veh.carburant }}</dd></div>
+              <div class="spec"><dt>Dépôt de garantie</dt><dd>{{ veh.depot }} DT</dd></div>
+              <div class="spec"><dt>Prix par jour</dt><dd>{{ veh.prix }} DT</dd></div>
+            </dl>
+          </section>
+
+          <section aria-labelledby="h-eq">
+            <h2 id="h-eq">Équipements</h2>
+            <ul class="equip-list">@for (e of veh.eq; track e) { <li>{{ e }}</li> }</ul>
+          </section>
+
+          <section aria-labelledby="h-desc">
+            <h2 id="h-desc">Description</h2>
+            <p>{{ description(veh) }}</p>
+            <p class="fine" style="margin-top:.6rem">Modèle indiqué à titre d’exemple : le véhicule remis peut être un modèle similaire de la même catégorie.</p>
+          </section>
+
+          <section aria-labelledby="h-busy">
+            <h2 id="h-busy">Disponibilité à {{ dAgence() }}</h2>
+            <p>{{ parc().enService }} voiture{{ parc().enService > 1 ? 's' : '' }} de ce modèle en service dans cette agence{{ parc().total > parc().enService ? ', ' + (parc().total - parc().enService) + ' en location ou en entretien' : '' }}.</p>
+            @if (parc().creneaux.length) {
+              <p class="fine" style="margin-top:.5rem">Prochains créneaux déjà réservés{{ parc().enService > 1 ? ' (sur l’une des voitures)' : '' }} :</p>
+              <ul class="busy-list">
+                @for (b of parc().creneaux; track $index) { <li>Du {{ fmtD(b.debut) }} au {{ fmtD(b.fin) }}</li> }
+              </ul>
+            }
+          </section>
+
+          <section aria-labelledby="h-cond">
+            <h2 id="h-cond">Conditions de location</h2>
+            <details open><summary>Conducteur, permis et dépôt de garantie</summary>
+              <p>Dépôt de garantie : {{ veh.depot }} DT, en pré-autorisation sur carte bancaire. Conducteur de 21 ans au minimum, titulaire du permis depuis plus de deux ans.</p></details>
+            <details><summary>Annulation et modification</summary><p>Voir les <a routerLink="/conditions" fragment="annulation">conditions d’annulation</a>. Les frais éventuels sont affichés avant toute confirmation.</p></details>
+            <details><summary>Kilométrage, carburant et restitution</summary><p>Kilométrage illimité. Le véhicule est remis avec le plein et doit être restitué avec le plein.</p></details>
+            <details><summary>Remplacement par un modèle similaire</summary><p>Si le véhicule réservé n’est pas disponible, un modèle de la même catégorie peut vous être remis. Vous en êtes informé avant la prise en charge.</p></details>
+          </section>
+        </div>
+
+        <aside class="book-card" aria-label="Réserver ce véhicule">
+          <div>
+            <div class="price-main">{{ veh.prix }} DT<span style="font-size:1rem"> / jour</span></div>
+            <div class="price-sub">Prix par jour, hors options</div>
+          </div>
+
+          <label>Agence de départ
+            <select [(ngModel)]="dAgence">@for (a of veh.ag; track a) { <option [value]="a">{{ a }}</option> }</select>
+          </label>
+          <label>Retrait <input type="datetime-local" [min]="maintenant" [(ngModel)]="dDebut"></label>
+          <label>Retour <input type="datetime-local" [min]="maintenant" [(ngModel)]="dFin"></label>
+          <label>Âge du conducteur
+            <select [(ngModel)]="dAge"><option value="">Choisir…</option>@for (a of ages; track a) { <option [value]="a">{{ a }}</option> }</select>
+          </label>
+
+          <p class="avail" [class.a-ok]="d().e === 'ok'" [class.a-no]="d().e === 'no'" [class.a-na]="d().e === 'na'">{{ texteDispo() }}</p>
+          @if (d().e === 'no') { <button class="btn btn-ghost btn-sm" type="button" (click)="decaler()">Décaler mes dates</button> }
+
+          <fieldset>
+            <legend>Options</legend>
+            <div class="opts">
+              @for (o of options; track o.id) {
+                <label class="opt"><input type="checkbox" [checked]="choisies().has(o.id)" (change)="basculerOption(o.id, $any($event.target).checked)">
+                  <span>{{ o.nom }}<small>{{ o.info }}</small></span><b>{{ tarifOption(o) }}</b></label>
+              }
+            </div>
+          </fieldset>
+
+          <table class="recap"><tbody>
+            @if (recap(); as r) {
+              @for (l of r.lignes; track l[0]) { <tr><td>{{ l[0] }}</td><td>{{ l[1] }} DT</td></tr> }
+              <tr class="tot"><td>Total estimé</td><td>{{ r.total }} DT</td></tr>
+            } @else {
+              <tr><td class="fine">Le détail du prix s’affiche avec vos dates.</td></tr>
+            }
+          </tbody></table>
+          <a class="btn btn-green" routerLink="/reservation" [queryParams]="paramsResa()" [attr.aria-disabled]="d().e === 'ok' ? 'false' : 'true'">Réserver ce véhicule</a>
+          <p class="fine">Estimation. Le prix final est recalculé et la disponibilité vérifiée au moment de la confirmation. Tarifs des options : exemples.</p>
+        </aside>
+      </div>
+    </article>
+  }
+</div>
+
+@if (v()) {
+  <section class="similar-band" aria-labelledby="h-sim">
+    <div class="wrap">
+      <h2 id="h-sim">Véhicules similaires</h2>
+      <div class="grid-veh">
+        @for (x of similaires(); track x.id) {
+          <article class="vcard">
+            <div class="v-img" [class]="'g-' + x.cat">
+              <img appPhoto [src]="photo(x)" [alt]="x.nom" loading="lazy">
+              @for (b of badges(x); track b.txt) { <span class="badge" [class]="b.cls">{{ b.txt }}</span> }
+            </div>
+            <div class="v-body">
+              <h3><a class="v-link" [routerLink]="['/voitures', x.id]" [queryParams]="paramsListe()">{{ x.nom }}</a></h3>
+              <p class="similar">{{ flotte.nomCat(x.cat) }} · ou similaire</p>
+              <p class="specs"><span><app-icone nom="places" [taille]="16" /> {{ x.places }} places</span><span><app-icone nom="bagages" [taille]="16" /> {{ x.bagTxt }}</span><span><app-icone nom="boite" [taille]="16" /> {{ x.boite }}</span></p>
+              <div class="price-main">{{ x.prix }} DT<span style="font-size:1rem"> / jour</span></div>
+              <a class="btn btn-green btn-sm" [routerLink]="['/voitures', x.id]" [queryParams]="paramsListe()">Voir le détail</a>
+            </div>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+}

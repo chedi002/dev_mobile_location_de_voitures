@@ -1,0 +1,88 @@
+<section class="page-head"><div class="wrap">
+  <h1>Road-trip en Tunisie</h1>
+  <p>Choisissez un circuit, voyez l’itinéraire jour par jour et le budget estimé, puis réservez la voiture adaptée.</p>
+</div></section>
+
+<div class="wrap rt-page">
+  <div class="rt-filters" role="group" aria-label="Filtrer les circuits">
+    <label>Durée
+      <select [(ngModel)]="fDuree">
+        <option value="">Toutes</option><option value="court">3 jours</option><option value="moyen">4 à 5 jours</option><option value="long">6 jours et plus</option>
+      </select>
+    </label>
+    <label>Type de voyage
+      <select [(ngModel)]="fType">
+        <option value="">Tous</option><option>famille</option><option>couple</option><option>nature</option><option>culture</option><option>aventure</option>
+      </select>
+    </label>
+    <p class="fine" aria-live="polite">{{ circuits().length }} circuit{{ circuits().length > 1 ? 's' : '' }}</p>
+  </div>
+
+  <div class="rt-grid">
+    @for (c of circuits(); track c.id) {
+      <button class="rt-card" type="button" [attr.aria-pressed]="courant()?.id === c.id" (click)="choisir(c)">
+        <span class="rt-photo">
+          <img appPhoto [src]="'images/destinations/' + c.photo + '.jpg'" [alt]="''" loading="lazy">
+          <span class="rt-duree">{{ jours(c) }} jours</span>
+          <span class="rt-titre"><h3>{{ c.nom }}</h3><span class="route">{{ c.villes }}</span></span>
+        </span>
+        <span class="body">
+          <span class="rt-meta">
+            <span><app-icone nom="route" [taille]="14" /> {{ nombre(km(c)) }} km</span>
+            <span><app-icone nom="saison" [taille]="14" /> {{ c.saison }}</span>
+          </span>
+          <p>{{ c.resume }}</p>
+          <span class="rt-types">@for (t of c.types; track t) { <span>{{ t }}</span> }</span>
+          <span class="from">
+            <span>À partir de<small>location {{ jours(c) }} jours, hors carburant</small></span>
+            <strong>{{ flotte.pret() ? prixDT(prixMini(c)) : '…' }}</strong>
+          </span>
+        </span>
+      </button>
+    } @empty {
+      <p class="rt-empty">Aucun circuit pour ces critères. Essayez un autre filtre.</p>
+    }
+  </div>
+
+  @if (courant(); as c) {
+    <div class="resa-layout" #detail>
+      <div>
+        <h2>{{ c.nom }} : {{ jours(c) }} jours, {{ nombre(km(c)) }} km</h2>
+        <p class="rt-resume">{{ c.resume }} Meilleure période : {{ c.saison.toLowerCase() }}.</p>
+        <ol class="rt-days">
+          @for (e of c.etapes; track e.titre) {
+            <li><div><h3>{{ e.titre }}</h3><p class="km">{{ e.km }} km · {{ e.duree }}</p><p>{{ e.texte }}</p></div></li>
+          }
+        </ol>
+        <div class="rt-tips"><strong>Conseils pratiques</strong><ul>@for (t of c.conseils; track t) { <li>{{ t }}</li> }</ul></div>
+      </div>
+
+      <aside class="ticket" aria-label="Budget estimé">
+        <h2>Budget estimé</h2>
+        <div class="form-grid">
+          <label class="full">Voiture
+            <select [(ngModel)]="bVoiture">
+              @for (x of listeVoitures(); track x[0]) { <option [value]="x[0]">{{ x[1].nom }} · dès {{ x[1].prix }} DT/j</option> }
+            </select>
+          </label>
+          <label>Voyageurs <input type="number" min="1" max="8" [(ngModel)]="bTrav"></label>
+          <label>Essence (DT/litre) <input type="number" min="1" max="6" step="0.005" [(ngModel)]="bPrix"></label>
+        </div>
+        @if (budget(); as b) {
+          <div class="t-lines" style="margin-top:.8rem">
+            @for (l of b.lignes; track l.t) { <details><summary><span>{{ l.t }}</span><span>{{ prixDT(l.m) }}</span></summary><p>{{ l.e }}</p></details> }
+          </div>
+          <div class="t-total"><span>Total</span><span>{{ prixDT(b.total) }}</span></div>
+          <p class="rt-pp">{{ b.parPersonne ? 'Soit environ ' + prixDT(b.parPersonne) + ' par personne' : '' }}</p>
+          <p class="fine">Estimation indicative : prix de location, consommation et péages à vérifier à la réservation.</p>
+          <div class="rt-actions">
+            <button class="btn btn-green" type="button" (click)="reserver()">Réserver cette voiture</button>
+            <a class="btn btn-ghost" target="_blank" rel="noopener" [href]="b.wa">Un circuit sur mesure ? WhatsApp</a>
+          </div>
+        } @else {
+          <p class="chargement">Chargement des tarifs…</p>
+        }
+      </aside>
+    </div>
+  }
+</div>

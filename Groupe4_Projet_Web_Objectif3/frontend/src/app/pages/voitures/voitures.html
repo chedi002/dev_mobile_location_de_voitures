@@ -1,0 +1,165 @@
+<section class="page-head">
+  <div class="wrap">
+    <h1>Choisissez la voiture de votre voyage</h1>
+    <p>Indiquez vos dates : le prix total et la disponibilité s’affichent sur chaque véhicule.</p>
+  </div>
+</section>
+
+<div class="wrap cat-layout">
+
+  <aside class="filters" [class.open]="filtresOuverts()" aria-label="Filtres">
+    <div class="f-top"><h2>Filtres</h2><button class="f-close" type="button" (click)="filtresOuverts.set(false)">Voir les résultats</button></div>
+
+    <fieldset>
+      <legend>Votre voyage</legend>
+      <div class="chips">
+        @for (vo of voyages; track vo[0]) {
+          <button type="button" class="chip" [attr.aria-pressed]="voyage() === vo[0]" (click)="basculerVoyage(vo[0])">{{ vo[1] }}</button>
+        }
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Dates et agence</legend>
+      <label>Agence de départ
+        <select [(ngModel)]="fDepart">
+          <option value="">Toutes</option>
+          @for (a of flotte.agences(); track a) { <option [value]="a">{{ a }}</option> }
+        </select>
+      </label>
+      <label>Retrait <input type="datetime-local" [(ngModel)]="fDebut"></label>
+      <label>Retour <input type="datetime-local" [(ngModel)]="fFin"></label>
+      <label>Âge du conducteur
+        <select [(ngModel)]="fAge">
+          <option value="">Choisir…</option>
+          @for (a of ages; track a) { <option [value]="a">{{ a }}</option> }
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Véhicule</legend>
+      <label>Catégorie
+        <select [(ngModel)]="fCat">
+          <option value="">Toutes</option>
+          @for (c of flotte.ordre(); track c) { <option [value]="c">{{ flotte.nomCat(c) }}</option> }
+        </select>
+      </label>
+      <label>Boîte de vitesses
+        <select [(ngModel)]="fBoite"><option value="">Toutes</option><option>Manuelle</option><option>Automatique</option></select>
+      </label>
+      <label>Places minimum
+        <select [(ngModel)]="fPlaces"><option value="0">Peu importe</option><option value="4">4</option><option value="5">5</option><option value="7">7</option><option value="9">9</option></select>
+      </label>
+      <label for="fPrix">Prix maximum par jour</label>
+      <div class="range-row">
+        <input type="range" id="fPrix" min="60" [max]="prixMaxBorne" step="10" [(ngModel)]="fPrix">
+        <output for="fPrix">{{ fPrix() >= prixMaxBorne ? 'Tous prix' : fPrix() + ' DT' }}</output>
+      </div>
+    </fieldset>
+
+    <button type="button" class="link-btn" (click)="reinit()">Réinitialiser les filtres</button>
+  </aside>
+
+  <section class="results" aria-label="Résultats">
+    <div class="toolbar">
+      <button class="btn btn-ghost btn-sm f-open" type="button" (click)="filtresOuverts.set(true)">Filtres</button>
+      <p aria-live="polite">{{ pluriel(liste().length, 'véhicule') }}{{ s().ok ? ' · ' + pluriel(s().nj, 'jour') : '' }}</p>
+      <div class="seg" role="group" aria-label="Affichage du prix">
+        <button type="button" [attr.aria-pressed]="modeEffectif() === 'jour'" (click)="mode.set('jour')">Par jour</button>
+        <button type="button" [attr.aria-pressed]="modeEffectif() === 'total'" (click)="mode.set('total')">Prix total</button>
+      </div>
+      <label>Trier
+        <select [(ngModel)]="fTri"><option value="prix">Prix croissant</option><option value="prixd">Prix décroissant</option><option value="cat">Catégorie</option></select>
+      </label>
+    </div>
+
+    <div class="infos">
+      @for (i of infos(); track i.txt) { <p [class]="i.cls">{{ i.txt }}</p> }
+    </div>
+
+    @if (!flotte.pret()) {
+      <p class="chargement">Chargement de la flotte…</p>
+    }
+
+    <div class="grid-veh">
+      @for (x of liste(); track x.v.id) {
+        <article class="vcard" [class.off]="x.d.e === 'no'">
+          <div class="v-img" [class]="'g-' + x.v.cat">
+            <img appPhoto [src]="photo(x.v)" [alt]="x.v.nom" loading="lazy">
+            @for (b of badges(x.v); track b.txt) { <span class="badge" [class]="b.cls">{{ b.txt }}</span> }
+          </div>
+          <div class="v-body">
+            <h3><a class="v-link" [routerLink]="['/voitures', x.v.id]" [queryParams]="params(x.v)">{{ x.v.nom }}</a></h3>
+            <p class="similar">{{ flotte.nomCat(x.v.cat) }} · ou similaire</p>
+            <p class="specs"><span><app-icone nom="places" [taille]="16" /> {{ x.v.places }} places</span><span><app-icone nom="bagages" [taille]="16" /> {{ x.v.bagTxt }}</span><span><app-icone nom="boite" [taille]="16" /> {{ x.v.boite }}</span></p>
+            <p class="equip">{{ x.v.eq.join(' · ') }}</p>
+            @switch (x.d.e) {
+              @case ('ok') { <p class="avail a-ok">Disponible pour vos dates</p> }
+              @case ('no') { <p class="avail a-no">Indisponible · libre dès le {{ libre(x.d) }}</p> }
+              @default { <p class="avail a-na">Disponibilité selon vos dates</p> }
+            }
+            @if (modeEffectif() === 'total' && s().ok) {
+              <div class="price-main">{{ x.v.prix * s().nj }} DT</div>
+              <div class="price-sub">pour {{ pluriel(s().nj, 'jour') }} · {{ x.v.prix }} DT / jour</div>
+            } @else {
+              <div class="price-main">{{ x.v.prix }} DT<span style="font-size:1rem"> / jour</span></div>
+              <div class="price-sub">{{ s().ok ? 'Total : ' + x.v.prix * s().nj + ' DT pour ' + s().nj + ' j' : 'Total selon vos dates' }}</div>
+            }
+            <div class="v-actions">
+              <label class="cmp-check"><input type="checkbox" [checked]="comp().has(x.v.id)" (change)="basculerComp(x.v.id, $any($event.target).checked, $event)"> Comparer</label>
+              <a class="v-detail" [routerLink]="['/voitures', x.v.id]" [queryParams]="params(x.v)">Voir le détail</a>
+              @if (x.d.e === 'no') {
+                <button class="btn btn-ghost btn-sm" type="button" (click)="decalerAuLibre(x.d)">Décaler mes dates</button>
+              } @else {
+                <a class="btn btn-green btn-sm" routerLink="/reservation" [queryParams]="params(x.v, true)">Réserver</a>
+              }
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+
+    @if (flotte.pret() && !liste().length) {
+      <div class="empty">
+        <h3>Aucun véhicule ne correspond</h3>
+        <p>Essayez l’une de ces pistes :</p>
+        <div class="chips">
+          @for (p of pistes(); track p[0]) { <button type="button" class="chip" (click)="piste(p[0])">{{ p[1] }}</button> }
+        </div>
+      </div>
+    }
+  </section>
+</div>
+
+<div class="scrim" [class.show]="filtresOuverts()" (click)="filtresOuverts.set(false)"></div>
+
+@if (comp().size) {
+  <div class="cmp-bar">
+    <span>{{ comp().size }} véhicule{{ comp().size > 1 ? 's' : '' }} sélectionné{{ comp().size > 1 ? 's' : '' }} (3 max)</span>
+    <button class="btn btn-amber btn-sm" type="button" [disabled]="comp().size < 2" (click)="ouvrirComparateur()">Comparer</button>
+    <button class="link-btn" type="button" (click)="viderComp()">Vider</button>
+  </div>
+}
+
+<dialog #dlg aria-labelledby="cmpTitre">
+  <div class="dlg-head"><h2 id="cmpTitre">Comparer les véhicules</h2><button class="btn btn-ghost btn-sm" style="color:#fff;border-color:#fff" type="button" (click)="fermerComparateur()">Fermer</button></div>
+  <div class="dlg-body">
+    <table>
+      <thead><tr><th></th>@for (v of aComparer(); track v.id) { <th scope="col">{{ v.nom }}</th> }</tr></thead>
+      <tbody>
+        <tr><th scope="row">Prix par jour</th>@for (v of aComparer(); track v.id) { <td>{{ v.prix }} DT</td> }</tr>
+        @if (s().ok) { <tr><th scope="row">Total ({{ s().nj }} j)</th>@for (v of aComparer(); track v.id) { <td>{{ v.prix * s().nj }} DT</td> }</tr> }
+        <tr><th scope="row">Catégorie</th>@for (v of aComparer(); track v.id) { <td>{{ flotte.nomCat(v.cat) }} ou similaire</td> }</tr>
+        <tr><th scope="row">Places</th>@for (v of aComparer(); track v.id) { <td>{{ v.places }}</td> }</tr>
+        <tr><th scope="row">Bagages</th>@for (v of aComparer(); track v.id) { <td>{{ v.bagTxt }}</td> }</tr>
+        <tr><th scope="row">Boîte</th>@for (v of aComparer(); track v.id) { <td>{{ v.boite }}</td> }</tr>
+        <tr><th scope="row">Équipements</th>@for (v of aComparer(); track v.id) { <td>{{ v.eq.join(', ') }}</td> }</tr>
+        <tr><th scope="row">Disponibilité</th>@for (v of aComparer(); track v.id) { <td>{{ texteDispo(v) }}</td> }</tr>
+        <tr><th scope="row"></th>@for (v of aComparer(); track v.id) {
+          <td><a class="btn btn-green btn-sm" routerLink="/reservation" [queryParams]="params(v, true)" (click)="fermerComparateur()">Réserver</a></td>
+        }</tr>
+      </tbody>
+    </table>
+  </div>
+</dialog>
